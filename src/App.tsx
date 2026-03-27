@@ -3,6 +3,7 @@ import {
   Bar, BarChart, XAxis, YAxis, Area, AreaChart, CartesianGrid,
   Pie, PieChart, Cell, ResponsiveContainer, Tooltip,
 } from 'recharts';
+import { ComposableMap, Geographies, Geography, Marker, Line } from 'react-simple-maps';
 import { TrendingUp, TrendingDown, RefreshCw, Plus, Clock, ShieldCheck, Repeat2, Percent } from 'lucide-react';
 import { useDashboardData, useGenerateDemoData } from './hooks';
 import type { DashboardMetrics, OutcomeDistribution, CallRecord } from './types';
@@ -386,6 +387,165 @@ function SentimentPieChart({ positive, neutral, negative }: { positive: number; 
 }
 
 // ============================================================================
+// Network Explorer — US lane map
+// ============================================================================
+const GEO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
+
+const CITY_COORDS: Record<string, [number, number]> = {
+  'Dallas':        [-96.797,  32.776],
+  'Atlanta':       [-84.388,  33.749],
+  'Chicago':       [-87.629,  41.878],
+  'Denver':        [-104.990, 39.739],
+  'Houston':       [-95.370,  29.760],
+  'Phoenix':       [-112.074, 33.449],
+  'Los Angeles':   [-118.243, 34.052],
+  'Seattle':       [-122.332, 47.606],
+  'Miami':         [-80.192,  25.775],
+  'New York':      [-74.006,  40.712],
+  'Nashville':     [-86.781,  36.163],
+  'Memphis':       [-90.048,  35.150],
+  'Portland':      [-122.676, 45.523],
+  'San Francisco': [-122.419, 37.775],
+  'Kansas City':   [-94.579,  39.100],
+  'Minneapolis':   [-93.265,  44.978],
+};
+
+// All lanes available in the load database (always shown faintly)
+const ALL_LANES: Array<{ from: string; to: string }> = [
+  { from: 'Dallas',       to: 'Atlanta'       },
+  { from: 'Chicago',      to: 'Denver'        },
+  { from: 'Houston',      to: 'Phoenix'       },
+  { from: 'Los Angeles',  to: 'Seattle'       },
+  { from: 'Miami',        to: 'New York'      },
+  { from: 'Atlanta',      to: 'Dallas'        },
+  { from: 'Nashville',    to: 'Memphis'       },
+  { from: 'Portland',     to: 'San Francisco' },
+  { from: 'Kansas City',  to: 'Minneapolis'   },
+];
+
+function NetworkExplorer({ calls }: { calls: CallRecord[] }) {
+  // Booked route frequencies
+  const bookedRoutes = calls
+    .filter(c =>
+      (c.outcome === 'load_booked' || c.outcome === 'price_agreed_transfer') &&
+      c.origin_city && c.destination_city
+    )
+    .reduce((acc, c) => {
+      const key = `${c.origin_city}→${c.destination_city}`;
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+  // City activity (calls mentioning that city)
+  const cityActivity = calls.reduce((acc, c) => {
+    if (c.origin_city)      acc[c.origin_city]      = (acc[c.origin_city]      || 0) + 1;
+    if (c.destination_city) acc[c.destination_city] = (acc[c.destination_city] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const totalBooked = Object.values(bookedRoutes).reduce((a, b) => a + b, 0);
+  const activeLanes = Object.keys(bookedRoutes).length;
+
+  return (
+    <div className="rounded-xl border bg-card text-card-foreground shadow-sm transition-all duration-200 hover:shadow-md">
+      <div className="p-6 pb-2">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h3 className="font-semibold">Network Explorer</h3>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Active freight lanes · {activeLanes} lanes · {totalBooked} bookings
+            </p>
+          </div>
+          <div className="flex items-center gap-5 text-xs">
+            <div className="flex items-center gap-1.5">
+              <div className="h-0.5 w-6 bg-border rounded" />
+              <span className="text-muted-foreground">Available lane</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="h-0.5 w-6 bg-amber-400 rounded" />
+              <span className="text-muted-foreground">Booked</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+              <span className="text-muted-foreground">City activity</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="px-4 pb-4">
+        <ComposableMap
+          projection="geoAlbersUsa"
+          style={{ width: '100%', height: '380px' }}
+        >
+          <Geographies geography={GEO_URL}>
+            {({ geographies }) =>
+              (geographies as Array<{ rsmKey: string }>).map(geo => (
+                <Geography
+                  key={geo.rsmKey}
+                  geography={geo}
+                  fill="hsl(var(--muted))"
+                  stroke="hsl(var(--border))"
+                  strokeWidth={0.6}
+                  style={{ outline: 'none' }}
+                />
+              ))
+            }
+          </Geographies>
+
+          {/* All available lanes — faint */}
+          {ALL_LANES.map(({ from, to }) => {
+            const fromCoords = CITY_COORDS[from];
+            const toCoords   = CITY_COORDS[to];
+            if (!fromCoords || !toCoords) return null;
+            return (
+              <Line
+                key={`avail-${from}-${to}`}
+                from={fromCoords}
+                to={toCoords}
+                stroke="hsl(var(--border))"
+                strokeWidth={1}
+                strokeOpacity={0.8}
+              />
+            );
+          })}
+
+          {/* Booked routes — highlighted, thicker by volume */}
+          {Object.entries(bookedRoutes).map(([key, count]) => {
+            const [from, to] = key.split('→');
+            const fromCoords = CITY_COORDS[from];
+            const toCoords   = CITY_COORDS[to];
+            if (!fromCoords || !toCoords) return null;
+            return (
+              <Line
+                key={`booked-${key}`}
+                from={fromCoords}
+                to={toCoords}
+                stroke="#f59e0b"
+                strokeWidth={Math.min(1 + count, 4)}
+                strokeOpacity={0.85}
+              />
+            );
+          })}
+
+          {/* City markers */}
+          {Object.entries(CITY_COORDS).map(([city, coords]) => {
+            const activity = cityActivity[city] || 0;
+            const r = activity > 0 ? Math.min(3 + activity * 1.2, 10) : 3;
+            const fill = activity > 0 ? '#3b82f6' : 'hsl(var(--muted-foreground))';
+            const opacity = activity > 0 ? 0.85 : 0.3;
+            return (
+              <Marker key={city} coordinates={coords}>
+                <circle r={r} fill={fill} fillOpacity={opacity} stroke="#fff" strokeWidth={0.8} />
+              </Marker>
+            );
+          })}
+        </ComposableMap>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // Calls Table — full extracted data per call
 // ============================================================================
 function CallsTable({ calls }: { calls: CallRecord[] }) {
@@ -498,14 +658,14 @@ const DEMO_DISTRIBUTION: OutcomeDistribution = {
 };
 
 const DEMO_CALLS: CallRecord[] = [
-  { id: '1', timestamp: new Date().toISOString(), carrier_name: 'Swift Transport LLC', carrier_mc: '482910', load_id: 'LD-001', outcome: 'load_booked', sentiment: 'positive', duration_seconds: 245, negotiation_rounds: 2, initial_rate: 2800, final_rate: 2650, discount_percentage: 5.4, transfer_successful: true },
-  { id: '2', timestamp: new Date(Date.now() - 3600000).toISOString(), carrier_name: 'Midwest Freight Co', carrier_mc: '391827', load_id: 'LD-002', outcome: 'price_agreed_transfer', sentiment: 'eager', duration_seconds: 312, negotiation_rounds: 3, initial_rate: 3200, final_rate: 2950, discount_percentage: 7.8, transfer_successful: true },
-  { id: '3', timestamp: new Date(Date.now() - 7200000).toISOString(), carrier_name: 'Pacific Haulers Inc', carrier_mc: '519283', load_id: 'LD-003', outcome: 'no_agreement', sentiment: 'neutral', duration_seconds: 180, negotiation_rounds: 3, initial_rate: 2400, final_rate: null, discount_percentage: null, transfer_successful: false },
-  { id: '4', timestamp: new Date(Date.now() - 10800000).toISOString(), carrier_name: 'Eastern Express', carrier_mc: '628194', load_id: 'LD-004', outcome: 'load_booked', sentiment: 'very_positive', duration_seconds: 198, negotiation_rounds: 1, initial_rate: 1850, final_rate: 1850, discount_percentage: 0, transfer_successful: true },
-  { id: '5', timestamp: new Date(Date.now() - 14400000).toISOString(), carrier_name: 'Summit Logistics', carrier_mc: '738291', load_id: null, outcome: 'carrier_ineligible', sentiment: 'negative', duration_seconds: 95, negotiation_rounds: 0, initial_rate: null, final_rate: null, discount_percentage: null, transfer_successful: false },
-  { id: '6', timestamp: new Date(Date.now() - 18000000).toISOString(), carrier_name: 'Blue Ridge Trucking', carrier_mc: '847392', load_id: 'LD-005', outcome: 'load_booked', sentiment: 'positive', duration_seconds: 220, negotiation_rounds: 1, initial_rate: 3800, final_rate: 3650, discount_percentage: 3.9, transfer_successful: true },
-  { id: '7', timestamp: new Date(Date.now() - 21600000).toISOString(), carrier_name: 'Lone Star Carriers', carrier_mc: '956483', load_id: null, outcome: 'no_matching_loads', sentiment: 'neutral', duration_seconds: 78, negotiation_rounds: 0, initial_rate: null, final_rate: null, discount_percentage: null, transfer_successful: false },
-  { id: '8', timestamp: new Date(Date.now() - 25200000).toISOString(), carrier_name: 'Great Lakes Transit', carrier_mc: '104857', load_id: 'LD-006', outcome: 'price_agreed_transfer', sentiment: 'eager', duration_seconds: 290, negotiation_rounds: 2, initial_rate: 2100, final_rate: 1980, discount_percentage: 5.7, transfer_successful: true },
+  { id: '1', timestamp: new Date().toISOString(), carrier_name: 'Swift Transport LLC', carrier_mc: '482910', load_id: 'LD-001', outcome: 'load_booked', sentiment: 'positive', duration_seconds: 245, negotiation_rounds: 2, initial_rate: 2800, final_rate: 2650, discount_percentage: 5.4, transfer_successful: true, origin_city: 'Dallas', origin_state: 'TX', destination_city: 'Atlanta', destination_state: 'GA' },
+  { id: '2', timestamp: new Date(Date.now() - 3600000).toISOString(), carrier_name: 'Midwest Freight Co', carrier_mc: '391827', load_id: 'LD-002', outcome: 'price_agreed_transfer', sentiment: 'eager', duration_seconds: 312, negotiation_rounds: 3, initial_rate: 3200, final_rate: 2950, discount_percentage: 7.8, transfer_successful: true, origin_city: 'Chicago', origin_state: 'IL', destination_city: 'Denver', destination_state: 'CO' },
+  { id: '3', timestamp: new Date(Date.now() - 7200000).toISOString(), carrier_name: 'Pacific Haulers Inc', carrier_mc: '519283', load_id: 'LD-003', outcome: 'no_agreement', sentiment: 'neutral', duration_seconds: 180, negotiation_rounds: 3, initial_rate: 2400, final_rate: null, discount_percentage: null, transfer_successful: false, origin_city: null, origin_state: null, destination_city: null, destination_state: null },
+  { id: '4', timestamp: new Date(Date.now() - 10800000).toISOString(), carrier_name: 'Eastern Express', carrier_mc: '628194', load_id: 'LD-004', outcome: 'load_booked', sentiment: 'very_positive', duration_seconds: 198, negotiation_rounds: 1, initial_rate: 1850, final_rate: 1850, discount_percentage: 0, transfer_successful: true, origin_city: 'Los Angeles', origin_state: 'CA', destination_city: 'Seattle', destination_state: 'WA' },
+  { id: '5', timestamp: new Date(Date.now() - 14400000).toISOString(), carrier_name: 'Summit Logistics', carrier_mc: '738291', load_id: null, outcome: 'carrier_ineligible', sentiment: 'negative', duration_seconds: 95, negotiation_rounds: 0, initial_rate: null, final_rate: null, discount_percentage: null, transfer_successful: false, origin_city: null, origin_state: null, destination_city: null, destination_state: null },
+  { id: '6', timestamp: new Date(Date.now() - 18000000).toISOString(), carrier_name: 'Blue Ridge Trucking', carrier_mc: '847392', load_id: 'LD-005', outcome: 'load_booked', sentiment: 'positive', duration_seconds: 220, negotiation_rounds: 1, initial_rate: 3800, final_rate: 3650, discount_percentage: 3.9, transfer_successful: true, origin_city: 'Miami', origin_state: 'FL', destination_city: 'New York', destination_state: 'NY' },
+  { id: '7', timestamp: new Date(Date.now() - 21600000).toISOString(), carrier_name: 'Lone Star Carriers', carrier_mc: '956483', load_id: null, outcome: 'no_matching_loads', sentiment: 'neutral', duration_seconds: 78, negotiation_rounds: 0, initial_rate: null, final_rate: null, discount_percentage: null, transfer_successful: false, origin_city: null, origin_state: null, destination_city: null, destination_state: null },
+  { id: '8', timestamp: new Date(Date.now() - 25200000).toISOString(), carrier_name: 'Great Lakes Transit', carrier_mc: '104857', load_id: 'LD-006', outcome: 'price_agreed_transfer', sentiment: 'eager', duration_seconds: 290, negotiation_rounds: 2, initial_rate: 2100, final_rate: 1980, discount_percentage: 5.7, transfer_successful: true, origin_city: 'Atlanta', origin_state: 'GA', destination_city: 'Dallas', destination_state: 'TX' },
 ];
 
 // ============================================================================
@@ -625,6 +785,9 @@ export default function App() {
           <NegotiationFunnelChart calls={calls} />
           <RateWalkChart calls={calls} />
         </div>
+
+        {/* Network Explorer */}
+        <NetworkExplorer calls={calls} />
 
         {/* Call Volume */}
         <CallTrendsAreaChart calls={calls} />

@@ -63,6 +63,10 @@ export interface CallRecord {
   final_rate: number | null;
   discount_percentage: number | null;
   transfer_successful: boolean;
+  origin_city?: string | null;
+  origin_state?: string | null;
+  destination_city?: string | null;
+  destination_state?: string | null;
   notes?: string;
 }
 
