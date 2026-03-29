@@ -7,8 +7,9 @@ import type { DashboardData, ConnectionStatus } from '../types';
 
 // ── API Configuration ──
 
-const DEFAULT_API_URL = 'http://localhost:8000';
+const DEFAULT_API_URL = '';
 const REFRESH_INTERVAL = 30000; // 30 seconds
+const API_KEY = import.meta.env.VITE_API_KEY as string | undefined;
 
 // ── useDashboardData Hook ──
 
@@ -44,7 +45,8 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
     try {
       setStatus('connecting');
       
-      const response = await fetch(`${apiUrl}/api/v1/dashboard`);
+      const headers: HeadersInit = API_KEY ? { 'X-API-Key': API_KEY } : {};
+      const response = await fetch(`${apiUrl}/api/v1/dashboard`, { headers });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

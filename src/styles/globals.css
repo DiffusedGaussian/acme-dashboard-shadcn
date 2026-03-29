@@ -4,58 +4,44 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 142 76% 36%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 142 76% 36%;
-    --radius: 0.75rem;
-    --chart-1: 142 76% 36%;
-    --chart-2: 199 89% 48%;
-    --chart-3: 280 65% 60%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-  }
+    /* === SURFACES — warm off-white === */
+    --background:           34 10% 96%;   /* #F7F5F2 warm page bg */
+    --foreground:          220 20% 10%;   /* near-black */
+    --card:                  0  0% 100%;  /* pure white cards */
+    --card-foreground:     220 20% 10%;
+    --popover:               0  0% 100%;
+    --popover-foreground:  220 20% 10%;
 
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 142 76% 36%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    /* === PRIMARY — ACME green === */
+    --primary:             142 76% 36%;   /* #00C853 */
+    --primary-foreground:    0  0% 100%;
+
+    /* === SECONDARY / MUTED — warm gray === */
+    --secondary:            34  8% 93%;
+    --secondary-foreground: 220 20% 10%;
+    --muted:                34  8% 93%;   /* warm muted surface */
+    --muted-foreground:     34  5% 46%;   /* warm mid-gray */
+    --accent:               34  8% 93%;
+    --accent-foreground:   220 20% 10%;
+
+    /* === SEMANTIC === */
+    --destructive:           0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 142 76% 36%;
-    --chart-1: 142 76% 46%;
-    --chart-2: 199 89% 58%;
-    --chart-3: 280 65% 70%;
-    --chart-4: 43 74% 76%;
-    --chart-5: 27 87% 77%;
+    --warning:              14 90% 55%;   /* warm red-orange */
+    --warning-foreground:    0  0% 100%;
+
+    /* === BORDERS — warm === */
+    --border:               34  8% 88%;
+    --input:                34  8% 88%;
+    --ring:                142 76% 36%;
+    --radius:              0.75rem;
+
+    /* === CHART PALETTE === */
+    --chart-1: 142 76% 36%;  /* green  */
+    --chart-2:  38 90% 55%;  /* amber  */
+    --chart-3: 215 16% 57%;  /* slate  */
+    --chart-4:  34  5% 70%;
+    --chart-5:  34  5% 85%;
   }
 }
 
@@ -63,39 +49,52 @@
   * {
     @apply border-border;
   }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-/* Custom scrollbar */
+/* ── Scrollbar ── */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
-
 ::-webkit-scrollbar-track {
   background: hsl(var(--muted));
-  border-radius: 4px;
+  border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb {
   background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 4px;
+  border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
 }
 
-/* Loading spinner animation */
+/* ── Animations ── */
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
-
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: fade-in-up 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.delay-1 { animation-delay: 0.05s; }
+.delay-2 { animation-delay: 0.10s; }
+.delay-3 { animation-delay: 0.15s; }
+.delay-4 { animation-delay: 0.20s; }

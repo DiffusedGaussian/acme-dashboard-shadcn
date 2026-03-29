@@ -89,41 +89,28 @@ export function getOutcomeConfig(outcome: CallOutcome): OutcomeBadgeConfig {
 export interface SentimentBadgeConfig {
   className: string;
   label: string;
-  emoji: string;
 }
 
 export const SENTIMENT_CONFIG: Record<CarrierSentiment, SentimentBadgeConfig> = {
-  very_positive: { className: 'badge-success', label: 'Very Positive', emoji: '😄' },
-  positive: { className: 'badge-success', label: 'Positive', emoji: '🙂' },
-  eager: { className: 'badge-success', label: 'Eager', emoji: '🤩' },
-  neutral: { className: 'badge-neutral', label: 'Neutral', emoji: '😐' },
-  negative: { className: 'badge-warning', label: 'Negative', emoji: '😕' },
-  very_negative: { className: 'badge-danger', label: 'Very Negative', emoji: '😠' },
-  frustrated: { className: 'badge-danger', label: 'Frustrated', emoji: '😤' },
+  very_positive: { className: 'badge-success', label: 'Very Positive' },
+  positive: { className: 'badge-success', label: 'Positive' },
+  eager: { className: 'badge-success', label: 'Eager' },
+  neutral: { className: 'badge-neutral', label: 'Neutral' },
+  negative: { className: 'badge-warning', label: 'Negative' },
+  very_negative: { className: 'badge-danger', label: 'Very Negative' },
+  frustrated: { className: 'badge-danger', label: 'Frustrated' },
 };
 
 export function getSentimentConfig(sentiment: CarrierSentiment): SentimentBadgeConfig {
-  return SENTIMENT_CONFIG[sentiment] || { className: 'badge-neutral', label: sentiment, emoji: '❓' };
+  return SENTIMENT_CONFIG[sentiment] || { className: 'badge-neutral', label: sentiment };
 }
 
 // ── Chart Colors ──
 
 export const CHART_COLORS = {
-  // Outcomes
-  load_booked: '#00C853',
-  price_agreed_transfer: '#00A544',
-  no_agreement: '#F59E0B',
-  carrier_not_interested: '#A3A3A3',
-  carrier_ineligible: '#EF4444',
-  no_matching_loads: '#78716C',
-  call_dropped: '#DC2626',
-  carrier_hung_up: '#D97706',
-  max_negotiations_reached: '#EAB308',
-  
-  // Sentiment
-  positive: '#00C853',
-  neutral: '#A3A3A3',
-  negative: '#EF4444',
+  green:  '#00C853',
+  orange: '#F05A28',
+  slate:  '#94A3B8',
 } as const;
 
 // ── Number Formatting ──

@@ -1,116 +1,137 @@
-import { Card, CardHeader, CardTitle, CardDescription, CardAction, CardFooter } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Icons } from '../icons';
-import type { DashboardMetrics } from '../../types';
-import { formatCurrency, formatDuration, formatPercentage } from '../../utils';
+import { TrendingUp, TrendingDown, Clock, ShieldCheck, Repeat2, Percent } from 'lucide-react';
+import type { DashboardMetrics, OutcomeDistribution } from '../../types';
+import { formatDuration, formatPercentage } from '../../utils';
 
-interface KPICardsProps {
-  metrics: DashboardMetrics;
+// ── KPI Card — primary metric with trend badge ──
+
+interface KPICardProps {
+  title: string;
+  value: string;
+  trend: string;
+  trendUp: boolean;
+  subtitle: string;
+  description: string;
 }
 
-export function KPICards({ metrics }: KPICardsProps) {
-  const cards = [
+export function KPICard({ title, value, trend, trendUp, subtitle, description }: KPICardProps) {
+  return (
+    <div className="group relative rounded-xl border bg-card text-card-foreground shadow-sm p-3.5 transition-all duration-200 hover:shadow-md hover:border-primary/20 hover:-translate-y-0.5 cursor-default">
+      <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="relative">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs font-medium text-muted-foreground">{title}</span>
+          <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-px rounded border transition-colors ${
+            trendUp
+              ? 'text-primary border-primary/20 bg-primary/5'
+              : 'text-warning border-warning/20 bg-warning/5'
+          }`}>
+            {trendUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+            {trend}
+          </span>
+        </div>
+        <div className="text-2xl font-semibold tracking-tight mb-1.5">{value}</div>
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-1.5 text-xs text-foreground/80">
+            {subtitle}
+            {trendUp
+              ? <TrendingUp className="h-3 w-3 text-primary" />
+              : <TrendingDown className="h-3 w-3 text-warning" />}
+          </div>
+          <div className="text-xs text-muted-foreground">{description}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Stat Card — secondary metric with icon, no trend arrow ──
+
+interface StatCardProps {
+  title: string;
+  value: string;
+  subtitle: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+export function StatCard({ title, value, subtitle, icon: Icon }: StatCardProps) {
+  return (
+    <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-3.5 transition-all duration-200 hover:shadow-md cursor-default">
+      <div className="flex items-start justify-between">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-muted-foreground">{title}</p>
+          <p className="text-xl font-semibold tracking-tight mt-0.5">{value}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+        </div>
+        <Icon className="h-4 w-4 text-muted-foreground/50 mt-0.5" />
+      </div>
+    </div>
+  );
+}
+
+// ── Composed KPI rows for the dashboard ──
+
+interface DashboardKPIsProps {
+  metrics: DashboardMetrics;
+  distribution: OutcomeDistribution;
+}
+
+export function DashboardKPIs({ metrics, distribution }: DashboardKPIsProps) {
+  const totalCalls = Object.values(distribution).reduce((a, b) => a + (b || 0), 0);
+  const ineligibleCount = distribution.carrier_ineligible || 0;
+  const fmcsaPassRate = totalCalls > 0 ? (((totalCalls - ineligibleCount) / totalCalls) * 100).toFixed(0) : '—';
+
+  const primaryKPIs = [
     {
       title: 'Total Calls',
       value: metrics.total_calls.toString(),
-      description: "Today's inbound volume",
-      trend: metrics.total_calls > 0 ? '+' + metrics.total_calls : '0',
+      trend: `+${metrics.total_calls}`,
       trendUp: metrics.total_calls > 0,
-      footer: 'Carrier inquiries processed',
+      subtitle: 'Carriers processed',
+      description: 'Inbound call volume',
     },
     {
       title: 'Loads Booked',
       value: metrics.successful_bookings.toString(),
-      description: 'Successfully matched',
-      trend: metrics.successful_bookings > 0 ? '+' + metrics.successful_bookings : '0',
+      trend: `+${metrics.successful_bookings}`,
       trendUp: metrics.successful_bookings > 0,
-      footer: 'Confirmed shipments today',
+      subtitle: 'Successfully matched',
+      description: 'Confirmed shipments',
     },
     {
       title: 'Conversion Rate',
       value: formatPercentage(metrics.conversion_rate),
-      description: 'Calls to bookings',
-      trend: metrics.conversion_rate > 15 ? '+' + formatPercentage(metrics.conversion_rate - 15) : formatPercentage(metrics.conversion_rate - 15),
+      trend: metrics.conversion_rate > 15
+        ? `+${(metrics.conversion_rate - 15).toFixed(1)}% vs avg`
+        : `${(metrics.conversion_rate - 15).toFixed(1)}% vs avg`,
       trendUp: metrics.conversion_rate > 15,
-      footer: 'Industry avg: 15%',
+      subtitle: 'Calls to bookings',
+      description: 'Industry avg: 15%',
     },
     {
       title: 'Revenue Booked',
-      value: formatCurrency(metrics.total_revenue_booked),
-      description: 'Total confirmed value',
+      value: `$${(metrics.total_revenue_booked / 1000).toFixed(1)}k`,
       trend: metrics.total_revenue_booked > 0 ? 'Active' : 'Pending',
       trendUp: metrics.total_revenue_booked > 0,
-      footer: 'From matched loads',
-    },
-    {
-      title: 'Avg Call Duration',
-      value: formatDuration(Math.round(metrics.avg_call_duration_seconds)),
-      description: 'Per carrier interaction',
-      trend: metrics.avg_call_duration_seconds < 180 ? 'Efficient' : 'Extended',
-      trendUp: metrics.avg_call_duration_seconds < 180,
-      footer: 'Target: < 3 min',
-    },
-    {
-      title: 'Negotiation Rounds',
-      value: metrics.avg_negotiation_rounds.toFixed(1),
-      description: 'Average per call',
-      trend: metrics.avg_negotiation_rounds <= 2 ? 'Optimal' : 'High',
-      trendUp: metrics.avg_negotiation_rounds <= 2,
-      footer: 'Max allowed: 3',
-    },
-    {
-      title: 'Transfers to Rep',
-      value: metrics.transfers_to_rep.toString(),
-      description: 'Price agreed → handoff',
-      trend: metrics.transfers_to_rep > 0 ? '+' + metrics.transfers_to_rep : '0',
-      trendUp: metrics.transfers_to_rep > 0,
-      footer: 'Ready for confirmation',
-    },
-    {
-      title: 'Avg Discount',
-      value: formatPercentage(metrics.avg_discount_from_loadboard),
-      description: 'From loadboard rate',
-      trend: metrics.avg_discount_from_loadboard < 10 ? 'Good' : 'High',
-      trendUp: metrics.avg_discount_from_loadboard < 10,
-      footer: 'Target: < 10%',
+      subtitle: 'Total confirmed value',
+      description: 'From matched loads',
     },
   ];
 
+  const secondaryStats = [
+    { title: 'Avg Negotiation Rounds', value: metrics.avg_negotiation_rounds.toFixed(1), subtitle: 'Counter-offers per deal', icon: Repeat2 },
+    { title: 'Avg Rate Discount', value: formatPercentage(metrics.avg_discount_from_loadboard), subtitle: 'Below loadboard rate', icon: Percent },
+    { title: 'FMCSA Pass Rate', value: `${fmcsaPassRate}%`, subtitle: `${ineligibleCount} ineligible carriers`, icon: ShieldCheck },
+    { title: 'Avg Call Duration', value: formatDuration(metrics.avg_call_duration_seconds), subtitle: `${metrics.transfers_to_rep} transferred to rep`, icon: Clock },
+  ];
+
   return (
-    <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-      {cards.map((card, index) => (
-        <Card key={index} className='@container/card bg-gradient-to-t from-primary/5 to-card shadow-sm'>
-          <CardHeader>
-            <CardDescription>{card.title}</CardDescription>
-            <CardTitle className='text-2xl font-semibold tabular-nums @[250px]/card:text-3xl'>
-              {card.value}
-            </CardTitle>
-            <CardAction>
-              <Badge variant='outline'>
-                {card.trendUp ? (
-                  <Icons.trendingUp className='size-3' />
-                ) : (
-                  <Icons.trendingDown className='size-3' />
-                )}
-                {card.trend}
-              </Badge>
-            </CardAction>
-          </CardHeader>
-          <CardFooter className='flex-col items-start gap-1.5 text-sm'>
-            <div className='line-clamp-1 flex gap-2 font-medium'>
-              {card.description}
-              {card.trendUp ? (
-                <Icons.trendingUp className='size-4 text-emerald-500' />
-              ) : (
-                <Icons.trendingDown className='size-4 text-amber-500' />
-              )}
-            </div>
-            <div className='text-muted-foreground'>
-              {card.footer}
-            </div>
-          </CardFooter>
-        </Card>
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        {primaryKPIs.map((card, i) => <KPICard key={i} {...card} />)}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        {secondaryStats.map((s, i) => <StatCard key={i} {...s} />)}
+      </div>
+    </>
   );
 }

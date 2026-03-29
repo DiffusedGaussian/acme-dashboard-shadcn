@@ -82,7 +82,7 @@ export function RecentCalls({ calls }: RecentCallsProps) {
                     </p>
                     <span className='text-muted-foreground'>•</span>
                     <p className='text-xs text-muted-foreground'>
-                      {sentimentConfig.emoji}
+                      {sentimentConfig.label}
                     </p>
                   </div>
                 </div>

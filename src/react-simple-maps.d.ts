@@ -39,4 +39,12 @@ declare module 'react-simple-maps' {
     strokeLinecap?: string;
   }
   export function Line(props: LineProps): JSX.Element;
+
+  interface ZoomableGroupProps {
+    zoom?: number;
+    center?: [number, number];
+    onMoveEnd?: (position: { zoom: number; coordinates: [number, number] }) => void;
+    children?: ReactNode;
+  }
+  export function ZoomableGroup(props: ZoomableGroupProps): JSX.Element;
 }

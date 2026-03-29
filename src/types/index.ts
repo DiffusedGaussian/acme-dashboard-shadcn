@@ -48,6 +48,16 @@ export interface Carrier {
   insurance_status?: string;
 }
 
+// ── Call Analysis ──
+export interface CallAnalysis {
+  summary: string;
+  professionalism_score: number;   // 1–10
+  deal_quality: 'excellent' | 'good' | 'fair' | 'poor' | 'n/a';
+  key_moments: string[];
+  red_flags: string[];
+  recommendations: string;
+}
+
 // ── Call Record ──
 export interface CallRecord {
   id: string;
@@ -59,7 +69,7 @@ export interface CallRecord {
   sentiment: CarrierSentiment;
   duration_seconds: number;
   negotiation_rounds: number;
-  initial_rate: number | null;
+  loadboard_rate: number | null;
   final_rate: number | null;
   discount_percentage: number | null;
   transfer_successful: boolean;
@@ -68,6 +78,7 @@ export interface CallRecord {
   destination_city?: string | null;
   destination_state?: string | null;
   notes?: string;
+  call_analysis?: CallAnalysis | null;
 }
 
 // ── Dashboard Metrics ──
